@@ -123,118 +123,78 @@ age: number  →  z.number()       →  z.number().int().min(18).max(65)
 
 ## CLI 사용법
 
-모든 파이프라인 과정을 CLI로 실행할 수 있습니다.
-
-### 기본 형태
-
 ```bash
 npm run cli -- <command> [options]
 ```
 
-### 명령어 목록
-
-#### `list` — 사용 가능한 스키마 조회
-
-```bash
-npm run cli -- list
-```
-
-출력 예:
-```
-Available schemas:
-
-  • User
-  • Product
-  • Order
-```
-
 ---
 
-#### `pipeline` — 4단계 파이프라인 전체 출력
+### 기본 흐름 — 파이프라인 전체를 한 번에 실행
+
+**TypeScript 파일만 있으면 4단계가 연속으로 실행됩니다.**
 
 ```bash
-npm run cli -- pipeline User
-npm run cli -- pipeline Product
-npm run cli -- pipeline Order
+npm run cli -- from-ts src/types/user.ts pipeline
 ```
 
-출력 구조:
+명령 하나로 아래 4단계가 **순서대로 이어져** 출력됩니다:
+
 ```
-  ts-to-mock  ·  User pipeline
+  ts-to-mock  (from-ts)  ·  User
 
-  TypeScript Definition → Internal Type → OpenAPI 3.0 → Mock Data
+  TypeScript 파일 → Zod 스키마 → TypeScript Type → OpenAPI → Mock
 
-[1] Zod Schema Definition
+[1] Generated Zod Schema        ← TypeScript 인터페이스 → Zod 변환 결과
 ────────────────────────────────────────────────────────────────
-import { z } from "zod"
 export const UserSchema = z.object({ ... })
 
-[2] Derived TypeScript Type
+[2] Derived TypeScript Type     ← Zod → 타입 역추출
 ────────────────────────────────────────────────────────────────
-// Equivalent to: type User = z.infer<typeof UserSchema>
-interface User { ... }
+interface User { id: string; name: string; ... }
 
-[3] OpenAPI 3.0 Document
+[3] OpenAPI 3.0 Document        ← Zod → OpenAPI 변환
 ────────────────────────────────────────────────────────────────
-{ "openapi": "3.0.0", ... }
+{ "openapi": "3.0.0", "paths": { "/users": { ... } }, ... }
 
-[4] Mock Data
+[4] Mock Data                   ← Zod → 랜덤 목 데이터 생성
 ────────────────────────────────────────────────────────────────
-{ "id": "uuid...", "name": "Alice Smith", ... }
+{ "id": "uuid...", "name": "Alice Smith", "email": "...", ... }
+```
+
+파일에 인터페이스가 여러 개인 경우 `--schema` 로 루트 타입을 지정합니다:
+
+```bash
+npm run cli -- from-ts src/types/order.ts pipeline --schema Order
 ```
 
 ---
 
-#### `openapi` — OpenAPI 3.0 문서 생성
+### 특정 출력만 필요할 때
+
+파이프라인 전체가 아닌 **특정 단계의 결과만** 추출할 수 있습니다.
+
+#### OpenAPI 문서 추출
 
 ```bash
-# stdout 출력
-npm run cli -- openapi User
+# stdout
+npm run cli -- from-ts src/types/user.ts openapi
 
 # 파일로 저장
-npm run cli -- openapi User -o ./user-api.json
-npm run cli -- openapi Product -o ./product-api.json
-npm run cli -- openapi Order -o ./order-api.json
+npm run cli -- from-ts src/types/user.ts openapi -o user-api.json
+npm run cli -- from-ts src/types/order.ts openapi --schema Order -o order-api.json
 ```
 
-출력 예시 (일부):
-```json
-{
-  "openapi": "3.0.0",
-  "info": { "title": "User API", "version": "1.0.0" },
-  "paths": {
-    "/users": { "get": { "summary": "List Users", ... } },
-    "/users/{id}": { "get": { "summary": "Get User by id", ... } }
-  },
-  "components": {
-    "schemas": {
-      "User": {
-        "type": "object",
-        "properties": {
-          "id":    { "type": "string", "format": "uuid" },
-          "email": { "type": "string", "format": "email" },
-          "role":  { "type": "string", "enum": ["admin", "editor", "viewer"] }
-        }
-      }
-    }
-  }
-}
-```
-
----
-
-#### `mock` — 목 데이터 생성
+#### 목 데이터 추출
 
 ```bash
-# 단건 생성
-npm run cli -- mock User
+# 단건
+npm run cli -- from-ts src/types/user.ts mock
 
-# 여러 건 생성
-npm run cli -- mock User -n 5
-npm run cli -- mock Order -n 3
+# 여러 건
+npm run cli -- from-ts src/types/user.ts mock -n 5
 
 # 파일로 저장
-npm run cli -- mock Product -n 10 -o ./products.json
+npm run cli -- from-ts src/types/order.ts mock --schema Order -n 3 -o orders.json
 ```
 
 출력 예시:
@@ -249,6 +209,37 @@ npm run cli -- mock Product -n 10 -o ./products.json
   "tags": ["lorem", "ipsum"],
   "createdAt": "2024-03-15T09:23:41.000Z"
 }
+```
+
+---
+
+### Zod 파일 영구 저장 (선택)
+
+TypeScript → Zod 변환 결과를 파일로 저장합니다.  
+레지스트리 등록이나 refinement 추가가 필요할 때 사용합니다.
+
+```bash
+npm run cli -- generate src/types/user.ts -o src/models/user.ts
+```
+
+---
+
+### 레지스트리 스키마 명령 (React 데모 / MSW 용)
+
+`src/models/index.ts` 에 등록된 스키마를 직접 조작합니다.
+
+```bash
+# 등록된 스키마 목록 조회
+npm run cli -- list
+
+# 레지스트리 스키마로 파이프라인 실행
+npm run cli -- pipeline User
+
+# 레지스트리 스키마로 OpenAPI 생성
+npm run cli -- openapi User -o user-api.json
+
+# 레지스트리 스키마로 목 데이터 생성
+npm run cli -- mock User -n 5
 ```
 
 ---
