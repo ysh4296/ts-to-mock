@@ -120,6 +120,15 @@ function displayName(key: string): string {
   return key.endsWith("Schema") ? key.slice(0, -6) : key
 }
 
+/** User, count=1 → "const mockUser: User = { ... }" */
+function toTsVar(data: unknown, typeName: string, count: number): string {
+  const varName  = count === 1 ? `mock${typeName}` : `mock${typeName}s`
+  const typeAnn  = count === 1 ? typeName : `${typeName}[]`
+  const body     = JSON.stringify(data, null, 2)
+    .replace(/"([a-zA-Z_$][a-zA-Z0-9_$]*)": /g, "$1: ")  // "key": → key:
+  return `const ${varName}: ${typeAnn} = ${body}`
+}
+
 /** 여러 스키마 중 하나를 선택한다 (단일이면 자동, 복수면 마지막 or --schema 값 사용). */
 function pickSchema(
   schemas: Record<string, z.AnyZodObject>,
@@ -231,12 +240,12 @@ program
     const schema = resolveSchema(schemaName)
     const count  = Math.max(1, parseInt(opts.count, 10) || 1)
     const data   = count === 1 ? toMock(schema) : toMockList(schema, count)
-    const json   = JSON.stringify(data, null, 2)
+    const out    = toTsVar(data, schemaName, count)
     if (opts.output) {
-      writeFileSync(opts.output, json, "utf-8")
+      writeFileSync(opts.output, out, "utf-8")
       console.log(green("✓") + ` Written to ${opts.output}`)
     } else {
-      console.log(json)
+      console.log(out)
     }
   })
 
@@ -327,9 +336,14 @@ ${cyan("예시:")}
       }
 
       case "mock": {
-        const count = Math.max(1, parseInt(opts.count, 10) || 1)
-        const data  = count === 1 ? toMock(schema) : toMockList(schema, count)
-        writeOrPrint(JSON.stringify(data, null, 2))
+        const count   = Math.max(1, parseInt(opts.count, 10) || 1)
+        const targets = opts.schema
+          ? [{ s: schema, n: name }]
+          : keys.map(k => ({ s: schemas[k], n: displayName(k) }))
+        const out = targets
+          .map(({ s, n }) => toTsVar(count === 1 ? toMock(s) : toMockList(s, count), n, count))
+          .join("\n\n")
+        writeOrPrint(out)
         break
       }
 
