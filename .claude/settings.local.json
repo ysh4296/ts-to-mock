@@ -7,7 +7,8 @@
       "Bash(npm i *)",
       "Bash(npx msw *)",
       "Bash(node -e \"require\\('ts-to-zod'\\)\")",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "WebSearch"
     ]
   }
 }

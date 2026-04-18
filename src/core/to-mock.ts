@@ -19,6 +19,7 @@ type ZodDef = {
   innerType?: z.ZodTypeAny
   options?:   z.ZodTypeAny[]
   shape?:     () => Record<string, z.ZodTypeAny>
+  returns?:   z.ZodTypeAny
 }
 
 function def(schema: z.ZodTypeAny): ZodDef {
@@ -88,6 +89,16 @@ export function zodToMock(schema: z.ZodTypeAny, fieldName?: string): unknown {
         Object.entries(shape).map(([k, v]) => [k, zodToMock(v, k)])
       )
     }
+
+    case "ZodFunction": {
+      const ret = d.returns
+      return (..._args: unknown[]) => ret ? zodToMock(ret) : undefined
+    }
+
+    case "ZodNull":      return null
+    case "ZodUndefined": return undefined
+    case "ZodUnknown":
+    case "ZodAny":       return null
 
     default: return null
   }
