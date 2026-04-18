@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(npx tsc *)",
+      "Bash(npm run *)",
+      "Bash(npm i *)",
+      "Bash(npx msw *)",
+      "Bash(node -e \"require\\('ts-to-zod'\\)\")",
+      "Read(//tmp/**)"
+    ]
+  }
+}

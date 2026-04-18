@@ -1,0 +1,357 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #f1f5f9;
+  color: #1e293b;
+  min-height: 100vh;
+}
+
+/* ── layout ──────────────────────────────────────────────────────────────── */
+.app {
+  max-width: 1640px;
+  margin: 0 auto;
+  padding: 28px 24px;
+}
+
+/* ── header ──────────────────────────────────────────────────────────────── */
+.app-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.app-title {
+  font-family: "Fira Code", Consolas, "Courier New", monospace;
+  font-size: 26px;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.5px;
+}
+
+.app-subtitle {
+  font-family: "Fira Code", Consolas, "Courier New", monospace;
+  font-size: 12.5px;
+  color: #64748b;
+  margin-top: 6px;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* schema selector */
+.tab-group {
+  display: flex;
+  background: #e2e8f0;
+  border-radius: 8px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.tab {
+  padding: 7px 20px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #475569;
+  transition: all 0.14s ease;
+}
+
+.tab:hover {
+  color: #0f172a;
+}
+
+.tab-active {
+  background: white;
+  color: #0f172a;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+/* regenerate button */
+.btn-regenerate {
+  padding: 8px 18px;
+  background: #10b981;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.14s ease;
+  white-space: nowrap;
+}
+
+.btn-regenerate:hover {
+  background: #059669;
+}
+
+/* ── pipeline flow bar ───────────────────────────────────────────────────── */
+.pipeline-flow {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: white;
+  border-radius: 10px;
+  padding: 13px 20px;
+  margin-bottom: 22px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  overflow-x: auto;
+}
+
+.flow-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.flow-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.flow-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #334155;
+  white-space: nowrap;
+}
+
+.flow-arrow {
+  color: #94a3b8;
+  font-size: 15px;
+  padding: 0 12px;
+}
+
+/* ── pipeline grid ───────────────────────────────────────────────────────── */
+.pipeline {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+@media (max-width: 1280px) {
+  .pipeline {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 680px) {
+  .pipeline {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── stage card ──────────────────────────────────────────────────────────── */
+.stage {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+}
+
+.stage-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 16px;
+  color: white;
+}
+
+.stage-number {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.stage-label {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.1px;
+}
+
+.stage-description {
+  padding: 12px 16px;
+  font-size: 12.5px;
+  color: #64748b;
+  line-height: 1.6;
+  min-height: 58px;
+  border-bottom: 1px solid #f8fafc;
+}
+
+/* ── code block ──────────────────────────────────────────────────────────── */
+.code-block {
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 16px;
+  font-family: "Fira Code", "Cascadia Code", Consolas, "Courier New", monospace;
+  font-size: 11.5px;
+  line-height: 1.7;
+  overflow: auto;
+  max-height: 520px;
+  flex: 1;
+}
+
+.code-block code {
+  display: block;
+  white-space: pre;
+}
+
+/* ── Mock API section ────────────────────────────────────────────────────── */
+.api-section {
+  margin-top: 40px;
+  padding-bottom: 40px;
+}
+
+.api-section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.api-section-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.msw-badge {
+  font-size: 11px;
+  font-weight: 700;
+  background: #f97316;
+  color: white;
+  padding: 3px 9px;
+  border-radius: 4px;
+  letter-spacing: 0.8px;
+  flex-shrink: 0;
+}
+
+.api-section-sub {
+  font-size: 13px;
+  color: #64748b;
+  width: 100%;
+  margin-top: 2px;
+}
+
+/* endpoint cards grid */
+.endpoint-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 1100px) {
+  .endpoint-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 640px) {
+  .endpoint-grid { grid-template-columns: 1fr; }
+}
+
+.endpoint-card {
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+}
+
+.endpoint-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.method-badge {
+  font-size: 11px;
+  font-weight: 700;
+  background: #dcfce7;
+  color: #166534;
+  padding: 2px 8px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  letter-spacing: 0.3px;
+}
+
+.endpoint-path {
+  font-family: "Fira Code", Consolas, monospace;
+  font-size: 13px;
+  color: #1e293b;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.btn-fetch {
+  padding: 5px 13px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  flex-shrink: 0;
+  transition: background 0.14s ease;
+  min-width: 64px;
+}
+
+.btn-fetch:hover:not(:disabled) { background: #2563eb; }
+.btn-fetch:disabled { background: #94a3b8; cursor: not-allowed; }
+
+.endpoint-desc {
+  padding: 8px 14px;
+  font-size: 12px;
+  color: #64748b;
+  border-bottom: 1px solid #f8fafc;
+}
+
+.response-block {
+  background: #0f172a;
+  color: #86efac;
+  padding: 14px;
+  font-family: "Fira Code", Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.65;
+  overflow: auto;
+  max-height: 260px;
+  margin: 0;
+  flex: 1;
+}
+
+.response-block code {
+  display: block;
+  white-space: pre;
+}
