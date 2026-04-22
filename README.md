@@ -8,11 +8,11 @@ npm run cli -- src/types/user.ts
 
 ```ts
 export const mockUser: User = {
-  id: "lorem",
+  id: "a3f2c1d4-...",
   name: "Alice Smith",
   email: "alice@example.com",
   age: 34,
-  role: "editor",
+  role: UserRole.Editor,
   isActive: true,
   tags: ["lorem", "ipsum"],
   createdAt: "2024-03-15T09:23:41.000Z"
@@ -73,11 +73,11 @@ export const mockUsers: User[] = [
 npm run cli -- src/types/user.ts -o src/mocks/mockUser.ts
 ```
 
-저장 시 타입 import가 자동으로 추가됩니다:
+저장 시 타입 import가 자동으로 추가됩니다. enum은 값으로 사용되므로 `type` 없이, 나머지는 `type`으로 임포트됩니다:
 
 ```ts
 // src/mocks/mockUser.ts (자동 생성)
-import type { User } from "../types/user"
+import { UserRole, type User } from "../types/user"
 
 export const mockUser: User = {
   ...
@@ -112,12 +112,13 @@ npm run cli -- src/types/order.ts --schema Order -n 3 -o src/mocks/mockOrder.ts
 
 ```
 src/
-  cli/index.ts      CLI 진입점
-  core/to-mock.ts   mock 생성 코어 (faker 기반)
-  types/            예시 TypeScript 타입 파일
+  cli/index.ts          CLI 진입점
+  core/ast-to-mock.ts   mock 생성 코어 (TypeScript AST + faker)
+  types/                예시 TypeScript 타입 파일
     user.ts
     product.ts
     order.ts
+  mocks/                생성된 mock 파일 (--out 옵션 사용 시)
 ```
 
 ---
@@ -126,9 +127,8 @@ src/
 
 ```
 TypeScript 파일
-  → ts-to-zod  (인터페이스 파싱)
-  → Zod schema (중간 표현)
-  → faker      (필드 타입에 맞는 랜덤 데이터 생성)
+  → TypeScript AST  (인터페이스 파싱)
+  → faker           (필드 타입에 맞는 랜덤 데이터 생성)
   → export const mockXxx: Xxx = { ... }
 ```
 
@@ -138,6 +138,64 @@ TypeScript 파일
 
 ## 주의사항
 
-- `string` 필드는 기본 lorem ipsum 값이 생성됩니다. 필드명이 `name`, `email`, `city` 등 인식 가능한 이름이면 faker가 적절한 값을 생성합니다.
-- `.uuid()`, `.email()` 같은 Zod refinement는 직접 Zod 스키마를 작성할 때만 적용됩니다.
-- 순환 참조 타입(`interface A { self?: A }`)은 지원하지 않습니다.
+### 정상 동작하는 경우
+
+**타입 지원**
+- `enum` → `UserRole.Admin` 형태의 정확한 참조값으로 생성됩니다.
+- `union`, `intersection`, `tuple` 지원
+- `Partial` / `Required` / `Readonly` / `Pick` / `Omit` / `Promise` / `Array<T>` 지원
+- `interface extends`로 상속받은 필드도 포함됩니다.
+- 상대경로(`./`, `../`)로 import한 타입은 자동으로 따라가 파싱합니다.
+
+**필드명 기반 데이터 생성**
+
+필드명을 인식해 타입에 맞는 값을 생성합니다:
+
+| 패턴 | 예시 필드명 | 생성 값 |
+|---|---|---|
+| 정확히 일치 | `name`, `email`, `company`, `phone` | faker 대응값 |
+| 정확히 일치 | `id` | UUID |
+| 정확히 일치 | `timezone`, `locale`, `slug`, `ip`, `mimeType` | 대응값 |
+| `*Id` 접미사 | `userId`, `teamId`, `projectId` | UUID |
+| `*At` 접미사 | `createdAt`, `updatedAt`, `joinedAt` | ISO 날짜 문자열 |
+| `*Date` 접미사 | `startDate`, `endDate`, `dueDate` | ISO 날짜 문자열 |
+| `*Url` 접미사 | `avatarUrl`, `imageUrl` | URL |
+| 그 외 `string` | - | lorem ipsum 단어 |
+
+### 제한사항
+
+**`WebAssembly.Memory`, `React.ReactNode` 같은 네임스페이스 전역 타입은 `{}` 로 생성됩니다.**
+
+`A.B` 형태의 타입은 TypeScript 내장 전역 선언이라 파일 파싱으로 접근할 수 없습니다.
+
+---
+
+**함수 타입 필드는 생성 결과에서 사라집니다.**
+
+```ts
+export interface Ctx {
+  onClick: (e: MouseEvent) => void   // → 생성된 파일에 이 필드 없음
+}
+```
+
+TypeScript는 타입 오류를 낼 수 있으므로 생성 후 수동으로 `jest.fn()` 등을 채워야 합니다.
+
+---
+
+**일부 유틸리티 타입은 `{}` 로 생성됩니다.**
+
+`Extract`, `Exclude`, `ReturnType`, `Parameters` 등의 고급 유틸리티 타입은 처리하지 못합니다.
+
+---
+
+**옵셔널 필드(`?`)는 약 30% 확률로 생략됩니다.**
+
+실행마다 결과가 달라지므로, 특정 필드가 반드시 필요하면 생성 후 직접 추가합니다.
+
+---
+
+**순환 참조 타입은 지원하지 않습니다.**
+
+```ts
+interface A { self?: A }  // → 스택 오버플로우 발생
+```

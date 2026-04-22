@@ -1,13 +1,10 @@
 #!/usr/bin/env node
-import { writeFileSync, readFileSync, mkdirSync } from "node:fs"
-import { resolve, relative, dirname }  from "node:path"
-import { Command }                     from "commander"
-import { z }                           from "zod"
-import { generate as tsToZod }        from "ts-to-zod"
-import { toMock, toMockList }         from "../core/to-mock"
+import { writeFileSync, mkdirSync } from "node:fs"
+import { resolve, relative, dirname } from "node:path"
+import { Command } from "commander"
+import { parseTypes, toMock, toMockList, EnumRef, type TypeMap } from "../core/ast-to-mock"
 
 const green = (s: string) => `\x1b[32m${s}\x1b[0m`
-const dim   = (s: string) => `\x1b[2m${s}\x1b[0m`
 const red   = (s: string) => `\x1b[31m${s}\x1b[0m`
 
 function die(msg: string): never {
@@ -16,57 +13,45 @@ function die(msg: string): never {
   throw new Error(msg)
 }
 
-function buildFromTs(filePath: string) {
-  let sourceText: string
-  try {
-    sourceText = readFileSync(resolve(filePath), "utf-8")
-  } catch {
-    die(`Cannot read file: ${filePath}`)
+function serialize(value: unknown, depth = 0): string {
+  const pad   = "  ".repeat(depth)
+  const inner = "  ".repeat(depth + 1)
+
+  if (value instanceof EnumRef)   return value.ref
+  if (value === null)              return "null"
+  if (value === undefined)         return "undefined"
+  if (typeof value === "string")   return JSON.stringify(value)
+  if (typeof value === "number" || typeof value === "boolean") return String(value)
+  if (Array.isArray(value)) {
+    if (value.length === 0) return "[]"
+    const items = value.map(v => `${inner}${serialize(v, depth + 1)}`).join(",\n")
+    return `[\n${items}\n${pad}]`
   }
-
-  const result = tsToZod({ sourceText, getSchemaName: (id) => `${id}Schema` })
-
-  if (result.errors.length > 0) {
-    result.errors.forEach(e => console.error(dim(`  · ${e}`)))
+  if (typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>)
+      .filter(([, v]) => v !== undefined)
+      .map(([k, v]) => `${inner}${k}: ${serialize(v, depth + 1)}`)
+    if (entries.length === 0) return "{}"
+    return `{\n${entries.join(",\n")}\n${pad}}`
   }
-
-  const zodCode = result.getZodSchemasFile("zod")
-  const keys    = [...zodCode.matchAll(/^export const (\w+)/gm)].map(m => m[1])
-
-  if (keys.length === 0) die(`No exportable types found in "${filePath}"`)
-
-  const body = zodCode
-    .split("\n")
-    .filter(l => !l.trimStart().startsWith("import "))
-    .map(l => l.startsWith("export ") ? l.slice(7) : l)
-    .join("\n")
-
-  const schemas = Object.fromEntries(
-    Object.entries(new Function("z", `${body}\nreturn {${keys.join(",")}}`) (z) as Record<string, unknown>)
-      .filter(([, v]) => v instanceof z.ZodType)
-  ) as Record<string, z.AnyZodObject>
-
-  return { schemas, keys }
-}
-
-function displayName(key: string): string {
-  return key.endsWith("Schema") ? key.slice(0, -6) : key
+  return "null"
 }
 
 function toTsVar(data: unknown, typeName: string, count: number): string {
   const varName = count === 1 ? `mock${typeName}` : `mock${typeName}s`
   const typeAnn = count === 1 ? typeName : `${typeName}[]`
-  const body    = JSON.stringify(data, null, 2)
-    .replace(/"([a-zA-Z_$][a-zA-Z0-9_$]*)": /g, "$1: ")
-  return `export const ${varName}: ${typeAnn} = ${body}`
+  return `export const ${varName}: ${typeAnn} = ${serialize(data)}`
 }
 
-function buildFileHeader(typeNames: string[], tsFile: string, outFile: string): string {
+function buildFileHeader(typeNames: string[], typeMap: TypeMap, tsFile: string, outFile: string): string {
   const from = relative(dirname(resolve(outFile)), resolve(tsFile))
     .replace(/\\/g, "/")
     .replace(/\.ts$/, "")
   const importPath = from.startsWith(".") ? from : "./" + from
-  return `import type { ${typeNames.join(", ")} } from "${importPath}"\n\n`
+  const specifiers = typeNames
+    .map(n => typeMap.get(n)?.kind === "enum" ? n : `type ${n}`)
+    .join(", ")
+  return `import { ${specifiers} } from "${importPath}"\n\n`
 }
 
 new Command()
@@ -85,26 +70,34 @@ Examples:
   ts-to-mock src/types/order.ts --schema Order -n 3 -o mocks/orders.ts
   `)
   .action((tsFile: string, opts: { count: string; out?: string; schema?: string }) => {
-    const { schemas, keys } = buildFromTs(tsFile)
+    let typeMap: ReturnType<typeof parseTypes>["typeMap"]
+    let exportedNames: string[]
+    try {
+      ;({ typeMap, exportedNames } = parseTypes(resolve(tsFile)))
+    } catch (e) {
+      die(`Cannot parse file: ${tsFile}\n${e}`)
+    }
+
+    if (exportedNames.length === 0) die(`No exported types found in "${tsFile}"`)
+
     const count = Math.max(1, parseInt(opts.count, 10) || 1)
 
     const targets = opts.schema
       ? (() => {
-          const key = keys.find(
-            k => k === opts.schema || k === `${opts.schema}Schema` ||
-                 displayName(k).toLowerCase() === opts.schema!.toLowerCase()
+          const name = exportedNames.find(
+            n => n === opts.schema || n.toLowerCase() === opts.schema!.toLowerCase()
           )
-          if (!key) die(`Schema "${opts.schema}" not found. Available: ${keys.map(displayName).join(", ")}`)
-          return [{ s: schemas[key!], n: displayName(key!) }]
+          if (!name) die(`Type "${opts.schema}" not found. Available: ${exportedNames.join(", ")}`)
+          return [name!]
         })()
-      : keys.map(k => ({ s: schemas[k], n: displayName(k) }))
+      : exportedNames
 
     const body = targets
-      .map(({ s, n }) => toTsVar(count === 1 ? toMock(s) : toMockList(s, count), n, count))
+      .map(n => toTsVar(count === 1 ? toMock(n, typeMap) : toMockList(n, typeMap, count), n, count))
       .join("\n\n")
 
     const out = opts.out
-      ? buildFileHeader(targets.map(t => t.n), tsFile, opts.out) + body
+      ? buildFileHeader(targets, typeMap, tsFile, opts.out) + body
       : body
 
     if (opts.out) {
