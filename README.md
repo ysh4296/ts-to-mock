@@ -3,7 +3,7 @@
 TypeScript 인터페이스 파일을 읽어 타입이 달린 mock 변수를 자동으로 생성하는 CLI 도구입니다.
 
 ```bash
-npm run cli -- src/types/user.ts
+ts-to-mock src/types/user.ts
 ```
 
 ```ts
@@ -21,10 +21,38 @@ export const mockUser: User = {
 
 ---
 
-## 설치
+## 설치 및 실행
+
+### npm / git URL로 설치한 경우
+
+```bash
+npx ts-to-mock src/types/user.ts
+npm exec ts-to-mock -- src/types/user.ts
+```
+
+### 로컬 개발 중 (빌드 없이)
 
 ```bash
 npm install
+npm run cli -- src/types/user.ts
+```
+
+### 빌드 후 직접 실행
+
+```bash
+npm run build          # dist/cli.js 생성
+node dist/cli.js src/types/user.ts
+npx . src/types/user.ts
+```
+
+### npm link (선택사항)
+
+시스템 전역에 `ts-to-mock` 명령어를 등록하고 싶다면:
+
+```bash
+npm run build
+npm link
+ts-to-mock src/types/user.ts
 ```
 
 ---
@@ -32,7 +60,7 @@ npm install
 ## 사용법
 
 ```bash
-npm run cli -- <ts-file> [options]
+ts-to-mock <ts-file> [options]
 ```
 
 ### 옵션
@@ -50,13 +78,13 @@ npm run cli -- <ts-file> [options]
 ### 기본 — stdout 출력
 
 ```bash
-npm run cli -- src/types/user.ts
+ts-to-mock src/types/user.ts
 ```
 
 ### 여러 개 생성
 
 ```bash
-npm run cli -- src/types/user.ts -n 5
+ts-to-mock src/types/user.ts -n 5
 ```
 
 ```ts
@@ -70,7 +98,7 @@ export const mockUsers: User[] = [
 ### 파일로 저장
 
 ```bash
-npm run cli -- src/types/user.ts -o src/mocks/mockUser.ts
+ts-to-mock src/types/user.ts -o src/mocks/mockUser.ts
 ```
 
 저장 시 타입 import가 자동으로 추가됩니다. enum은 값으로 사용되므로 `type` 없이, 나머지는 `type`으로 임포트됩니다:
@@ -94,16 +122,16 @@ export interface Order { ... }
 
 ```bash
 # 전체 타입 한 번에 생성
-npm run cli -- src/types/order.ts
+ts-to-mock src/types/order.ts
 
 # 특정 타입만 지정
-npm run cli -- src/types/order.ts --schema Order
+ts-to-mock src/types/order.ts --schema Order
 ```
 
 ### 조합 예시
 
 ```bash
-npm run cli -- src/types/order.ts --schema Order -n 3 -o src/mocks/mockOrder.ts
+ts-to-mock src/types/order.ts --schema Order -n 3 -o src/mocks/mockOrder.ts
 ```
 
 ---
