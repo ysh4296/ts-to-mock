@@ -3,10 +3,16 @@
   "version": "0.1.0",
   "type": "module",
   "bin": {
-    "ts-to-mock": "src/cli/index.ts"
+    "ts-to-mock": "dist/cli.js"
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "cli": "tsx src/cli/index.ts"
+    "build": "node scripts/build.mjs",
+    "cli": "tsx src/cli/index.ts",
+    "start": "node dist/cli.js",
+    "prepare": "npm run build"
   },
   "dependencies": {
     "@faker-js/faker": "^8.4.0",
@@ -15,6 +21,7 @@
   },
   "devDependencies": {
     "@types/node": "^25.6.0",
-    "tsx": "^4.7.0"
+    "esbuild": "0.25.11",
+    "tsx": "~4.20.0"
   }
 }
