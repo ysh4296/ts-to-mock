@@ -21,39 +21,10 @@ export const mockUser: User = {
 
 ---
 
-## 설치 및 실행
-
-### npm / git URL로 설치한 경우 (권장)
-
-```bash
-npx ts-to-mock --dir src/types --out-dir src/mocks
-npm exec ts-to-mock -- --dir src/types --out-dir src/mocks
-```
-
-### 로컬 개발 중 (빌드 없이)
+## 설치
 
 ```bash
 npm install
-npm run cli -- <ts-file> [options]
-npm run cli -- --dir src/types --out-dir src/mocks
-```
-
-### 빌드 후 로컬 실행
-
-```bash
-npm run build          # dist/cli.js 생성
-node dist/cli.js <ts-file> [options]
-npx . --dir src/types --out-dir src/mocks   # package.json bin 경유
-```
-
-### npm link (선택사항)
-
-시스템 전역에 `ts-to-mock` 명령어를 등록하고 싶다면:
-
-```bash
-npm run build
-npm link
-ts-to-mock --dir src/types --out-dir src/mocks
 ```
 
 ---
@@ -61,8 +32,7 @@ ts-to-mock --dir src/types --out-dir src/mocks
 ## 사용법
 
 ```bash
-ts-to-mock <ts-file> [options]
-ts-to-mock --dir <dir> --out-dir <dir> [options]
+npm run cli -- <ts-file> [options]
 ```
 
 ### 옵션
@@ -72,8 +42,6 @@ ts-to-mock --dir <dir> --out-dir <dir> [options]
 | `-n, --count <n>` | 생성 개수 | `1` |
 | `-o, --out <file>` | 파일로 저장 (기본: stdout) | - |
 | `-s, --schema <name>` | 특정 타입 지정 (기본: 파일 내 전체) | - |
-| `-d, --dir <dir>` | 디렉토리 전체 재귀 스캔 | - |
-| `--out-dir <dir>` | `--dir` 사용 시 출력 디렉토리 | - |
 
 ---
 
@@ -137,22 +105,6 @@ npm run cli -- src/types/order.ts --schema Order
 ```bash
 npm run cli -- src/types/order.ts --schema Order -n 3 -o src/mocks/mockOrder.ts
 ```
-
-### 디렉토리 전체 스캔
-
-프로젝트 내 TypeScript 파일을 재귀 탐색하며 폴더 구조를 그대로 보존해 mock 파일을 생성합니다.
-
-```bash
-ts-to-mock --dir src/types --out-dir src/mocks
-```
-
-```
-src/types/user.ts         →  src/mocks/user.ts
-src/types/api/order.ts    →  src/mocks/api/order.ts
-src/types/api/product.ts  →  src/mocks/api/product.ts
-```
-
-`node_modules`, `dist`, `.git` 등 빌드 산출물 디렉토리는 자동으로 제외됩니다. export된 타입이 없는 파일은 skip됩니다.
 
 ---
 
